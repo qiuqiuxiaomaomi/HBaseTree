@@ -48,3 +48,45 @@ HBase在进行负载均衡和故障恢复时对客户端是透明的，在生产
 下载安装
     下载HBase，解压，配置conf/hbase-site.xml， 配置数据目录， 启动， bin/start-hbase.sh, 进入 bin/hbase shell, status， 查询hbase运行状态
 </pre>
+
+<pre>
+在实践中，为了能够像MapReduce一样有效的利用你HDFS, HBASE大多始于Hadoop安装在一起的，这样能够很大程度上减少对网络I/O的需求，同时能够加快处理速度，当在同一个服务器上运行Hadoop和HBase时，
+最少会有三个进程((DataNode, TaskTracker, RegionServer)
+
+服务器
+    在HBase和Hadoop中有两种类型的机器:
+	     Master（HDFS的NameNode, MapReduce的jobtracker, 以及HBase的Master）
+		 Slave(HDFS的DataNode, MapReduce的tasktracker， 以及HBase的RegionServer)
+
+CPU
+   使用单核CPU机器，同时运行3个或者更多的Java进程和操作系统的服务进程是不合理的，在生产系统中，通常采用的是多核处理器。四核的处理器能够满足需求。
+</pre>
+
+![](https://i.imgur.com/t9rmxAX.jpg)
+
+<pre>
+磁盘
+    数据存储在slave机器上，因此slave机器需要大量的存储空间，用户需要根据主要是面向读写，还是数据加工，来平衡可用的CPU内核数量与磁盘数量的使用。通常应该
+	保证每个磁盘至少一个核，所以在8核心服务器增加6块磁盘是较优的，加入更多磁盘可能并不会带来显著的性能提升。
+	磁盘模式： JBOD模式
+	          RAID模式
+	一般推荐使用SATA盘，因为SATA比SAS更节省成本，虽然SAS安全性比SATA高，但是一半的软件策略中是跨机架数据冗余，因此可以放心的使用SATA盘，虽然3.5英寸的磁盘比2.5英寸的磁盘可靠，但考虑到服务器机架的因素，可以选择2.5寸的磁盘。
+</pre>
+
+<pre>
+Hadoop
+    目前HBase只能依赖特定的Hadoop版本，其中的主要原因之一是HBase与Hadoop之间的远程调用API，RPC协议是版本华的，并且需要调用方与被调用方相互匹配，细微的差异就可能导致通信失败。
+</pre>
+
+<pre>
+HBase是生产中使用最广泛的且进过检验的文件系统，几乎所有的生产集群都是用HDFS作为底层存储层，它被证明是稳定可靠的系统，然而不适用HDFS可能会产生不可控的风险和一些后续的问题。
+HDFS如此受欢迎的主要原因是，它的机制包含了冗余，容错性和可扩展性。无论选择哪个文件系统都应该提供类似的保障，因为HBASE需要嘉定文件系统的数据存储是可靠度额，并且HBASE本身没有办法复制
+数据并维护自身存储文件袋额副本，因此较低层次的文件系统必须提供此功能
+</pre>
+
+![](https://i.imgur.com/CmThJmL.jpg)
+
+<pre>
+本地模式
+    本地文件系统实际上完全绕过了Hadoop，即不使用HDFS或任何其他集群，HBase使用FileSystem类连接到文件系统实现。
+</pre>
